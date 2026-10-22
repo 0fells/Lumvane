@@ -9,6 +9,7 @@
 #include <QImageReader>
 #include <QPainter>
 #include <QPainterPath>
+#include <QRadialGradient>
 
 QIcon Icon::Themed(const QString &name, const QColor &color, int size) {
     QFile f(":/icon/ui/" + name + ".svg");
@@ -109,16 +110,34 @@ QIcon Icon::App() {
     return icon;
 }
 
-void Icon::PaintVane(QPainter &p, const QRectF &box) {
-    const QColor tail("#5C7CFF"), shaft("#6A4FE6"), head("#A68BFF");
+void Icon::PaintVane(QPainter &p, const QRectF &box, qreal swing, const QColor &mono, qreal glow) {
+    QColor tail("#5C7CFF"), shaft("#6A4FE6"), head("#A68BFF");
+    if (mono.isValid()) {
+        shaft = mono;
+        tail = mono;
+        tail.setAlphaF(mono.alphaF() * 0.55);
+        head = mono;
+        head.setAlphaF(mono.alphaF() * 0.8);
+    }
     p.save();
     p.setRenderHint(QPainter::Antialiasing);
     p.translate(box.center());
     p.scale(box.width() / 390.0, box.width() / 390.0);
     p.translate(-253, -268);
     p.translate(256, 256);
-    p.rotate(-30);
+    p.rotate(-30 + swing);
     p.translate(-256, -256);
+    if (glow > 0) {
+        QColor lit("#A68BFF"), clear("#A68BFF");
+        lit.setAlphaF(0.6 * glow);
+        clear.setAlphaF(0);
+        QRadialGradient halo(QPointF(392, 256), 140);
+        halo.setColorAt(0, lit);
+        halo.setColorAt(1, clear);
+        p.setPen(Qt::NoPen);
+        p.setBrush(halo);
+        p.drawEllipse(QPointF(392, 256), 140, 140);
+    }
     p.setPen(Qt::NoPen);
     p.setBrush(tail);
     p.drawPolygon(QPolygonF({{64, 214}, {150, 214}, {176, 256}, {150, 298}, {64, 298}, {98, 256}}));

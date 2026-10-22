@@ -1,5 +1,10 @@
 #include "include/ui/widget/StartStopButton.hpp"
+#include "include/ui/setting/Icon.hpp"
 #include "include/ui/setting/ThemeManager.hpp"
+
+#include <cmath>
+
+#include <QtMath>
 
 #include <QConicalGradient>
 #include <QEvent>
@@ -30,6 +35,19 @@ StartStopButton::StartStopButton(QWidget *parent) : QToolButton(parent) {
     m_spinAnim->setLoopCount(-1);
     m_spinAnim->setEasingCurve(QEasingCurve::Linear);
 
+    m_swayAnim = new QPropertyAnimation(this, "sway", this);
+    m_swayAnim->setStartValue(0.0);
+    m_swayAnim->setEndValue(360.0);
+    m_swayAnim->setDuration(1800);
+    m_swayAnim->setLoopCount(-1);
+    m_swayAnim->setEasingCurve(QEasingCurve::Linear);
+
+    m_gustAnim = new QPropertyAnimation(this, "gust", this);
+    m_gustAnim->setStartValue(0.0);
+    m_gustAnim->setEndValue(1.0);
+    m_gustAnim->setDuration(2600);
+    m_gustAnim->setEasingCurve(QEasingCurve::Linear);
+
     connect(this, &QAbstractButton::pressed, this, [this] { animate(m_pressAnim, 1.0, 110); });
     connect(this, &QAbstractButton::released, this, [this] { animate(m_pressAnim, 0.0, 160); });
 
@@ -43,8 +61,13 @@ QSize StartStopButton::sizeHint() const {
 
 void StartStopButton::setState(State s) {
     if (s == m_state) return;
+    const bool connected = m_state == State::Connecting && s == State::Running;
     m_state = s;
     applyState(true);
+    if (connected && m_shown) {
+        m_gustAnim->stop();
+        m_gustAnim->start();
+    }
 }
 
 void StartStopButton::setMode(Mode m) {
@@ -104,6 +127,7 @@ void StartStopButton::setLoopRunning(QPropertyAnimation *anim, bool running) {
     }
     anim->stop();
     if (anim == m_spinAnim) m_spin = 0.0;
+    if (anim == m_swayAnim) m_sway = 0.0;
     update();
 }
 
@@ -111,6 +135,7 @@ void StartStopButton::setLoopRunning(QPropertyAnimation *anim, bool running) {
 void StartStopButton::updateLoops() {
     const bool spinning = m_state == State::Connecting || m_state == State::Disconnecting;
     setLoopRunning(m_spinAnim, m_shown && spinning);
+    setLoopRunning(m_swayAnim, m_shown && spinning);
 }
 
 void StartStopButton::showEvent(QShowEvent *e) {
@@ -122,6 +147,9 @@ void StartStopButton::showEvent(QShowEvent *e) {
 void StartStopButton::hideEvent(QHideEvent *e) {
     m_shown = false;
     setLoopRunning(m_spinAnim, false);
+    setLoopRunning(m_swayAnim, false);
+    m_gustAnim->stop();
+    m_gust = 1.0;
     QToolButton::hideEvent(e);
 }
 
@@ -158,10 +186,7 @@ QColor StartStopButton::idleRingColor() const {
 }
 
 QColor StartStopButton::glyphColor() const {
-    const auto tk = ThemeManager::Tokens();
-    if (m_state == State::Running) return tk.onAccent;
-    if (m_state == State::Disabled) return tk.muted;
-    return tk.accent;
+    return ThemeManager::Tokens().muted;
 }
 
 QColor StartStopButton::targetRingColor() const {
@@ -205,10 +230,8 @@ void StartStopButton::paintEvent(QPaintEvent *) {
         p.setPen(QPen(m_ringColor, ringW));
         p.drawEllipse(c, ringR, ringR);
 
-        QColor fill = tk.accent;
-        if (hover) fill = tk.dark ? fill.lighter(112) : fill.darker(112);
         p.setPen(Qt::NoPen);
-        p.setBrush(fill);
+        p.setBrush(hover ? tk.subtle : tk.surface);
         p.drawEllipse(c, R, R);
     } else {
         p.setPen(QPen(tk.border, qMax(1.5, D * 0.03)));
@@ -237,13 +260,19 @@ void StartStopButton::paintEvent(QPaintEvent *) {
         p.drawEllipse(c, D / 2.0 - 1.0, D / 2.0 - 1.0);
     }
 
-    const qreal gs = R * 0.42;
-    QPen gpen(glyphColor(), qMax(2.0, D * 0.045));
-    gpen.setCapStyle(Qt::RoundCap);
-    p.setOpacity(m_dim * (busy ? 0.55 : 1.0));
-    p.setPen(gpen);
-    p.setBrush(Qt::NoBrush);
-    p.drawLine(c + QPointF(0, -gs * 1.15), c + QPointF(0, -gs * 0.2));
-    const QRectF ar(c.x() - gs, c.y() - gs, 2 * gs, 2 * gs);
-    p.drawArc(ar, 125 * 16, 290 * 16);
+    const qreal u = m_gust * 2.6;
+    const qreal gustAngle = m_gust < 1.0 ? 34.0 * std::exp(-1.7 * u) * std::sin(2 * M_PI * 1.1 * u) : 0.0;
+    const qreal glow = (u > 1.6 && u < 2.6) ? std::sin(M_PI * (u - 1.6)) : 0.0;
+    const qreal swayAngle = busy ? 12.0 * std::sin(qDegreesToRadians(m_sway)) : 0.0;
+    const qreal angle = gustAngle + swayAngle;
+    const qreal vs = R * 1.5;
+    const QRectF vane(c.x() - vs / 2, c.y() - vs / 2, vs, vs);
+    if (m_morph < 1.0) {
+        p.setOpacity(m_dim * (1.0 - m_morph));
+        Icon::PaintVane(p, vane, angle, glyphColor());
+    }
+    if (m_morph > 0.0) {
+        p.setOpacity(m_dim * m_morph);
+        Icon::PaintVane(p, vane, angle, QColor(), glow);
+    }
 }

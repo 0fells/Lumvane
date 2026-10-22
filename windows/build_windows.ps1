@@ -1,4 +1,4 @@
-param([switch]$SkipGo, [switch]$SkipCpp, [switch]$Tests, [string]$Version = '1.0.0')
+param([switch]$SkipGo, [switch]$SkipCpp, [switch]$Tests, [string]$Version = '1.0.1')
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 

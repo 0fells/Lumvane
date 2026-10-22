@@ -55,6 +55,20 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
+import kotlin.math.PI
+import kotlin.math.exp
+import kotlin.math.sin
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -320,15 +334,41 @@ private fun ConnectButton(state: VpnState, onClick: () -> Unit) {
     val container = when (state) {
         VpnState.Started -> scheme.surfaceContainerHigh
         is VpnState.Error -> scheme.errorContainer
-        VpnState.Starting, VpnState.Stopping -> scheme.tertiaryContainer
+        VpnState.Starting, VpnState.Stopping -> scheme.surfaceContainerHigh
         VpnState.Stopped -> scheme.surfaceVariant
     }
     val content = when (state) {
         VpnState.Started -> scheme.onPrimary
         is VpnState.Error -> scheme.onErrorContainer
-        VpnState.Starting, VpnState.Stopping -> scheme.onTertiaryContainer
+        VpnState.Starting, VpnState.Stopping -> scheme.onSurfaceVariant
         VpnState.Stopped -> scheme.onSurfaceVariant
     }
+    val busy = state == VpnState.Starting || state == VpnState.Stopping
+    val sway = remember { Animatable(0f) }
+    val gust = remember { Animatable(1f) }
+    var previous by remember { mutableStateOf(state) }
+    LaunchedEffect(state) {
+        val connected = previous == VpnState.Starting && state == VpnState.Started
+        previous = state
+        if (connected) {
+            gust.snapTo(0f)
+            gust.animateTo(1f, tween(2600, easing = LinearEasing))
+        }
+    }
+    LaunchedEffect(busy) {
+        if (busy) {
+            while (true) {
+                sway.animateTo(12f, tween(900, easing = FastOutSlowInEasing))
+                sway.animateTo(-12f, tween(900, easing = FastOutSlowInEasing))
+            }
+        } else {
+            sway.animateTo(0f, tween(300))
+        }
+    }
+    val u = gust.value * 2.6f
+    val gustAngle = if (gust.value < 1f) 34f * exp(-1.7f * u) * sin(2f * PI.toFloat() * 1.1f * u) else 0f
+    val glow = if (u > 1.6f && u < 2.6f) sin(PI.toFloat() * (u - 1.6f)) else 0f
+    val angle = sway.value + gustAngle
     val label = stringResource(if (state is VpnState.Started || state == VpnState.Starting) R.string.action_disconnect else R.string.action_connect)
     Surface(
         onClick = onClick, shape = CircleShape, color = container, contentColor = content,
@@ -337,10 +377,24 @@ private fun ConnectButton(state: VpnState, onClick: () -> Unit) {
         modifier = Modifier.size(208.dp).semantics { contentDescription = label },
     ) {
         Box(contentAlignment = Alignment.Center) {
+            val turn = Modifier.size(150.dp).graphicsLayer {
+                rotationZ = angle
+                transformOrigin = TransformOrigin(259f / 512f, 244f / 512f)
+            }
             when (state) {
-                VpnState.Starting, VpnState.Stopping -> CircularProgressIndicator(Modifier.size(88.dp), color = content)
-                VpnState.Started -> Image(painterResource(R.drawable.ic_lumvane_vane), null, Modifier.size(150.dp))
-                VpnState.Stopped -> Icon(painterResource(R.drawable.ic_lumvane_logo), null, Modifier.size(150.dp))
+                VpnState.Started, VpnState.Starting -> Box(turn) {
+                    if (glow > 0f) {
+                        Canvas(Modifier.matchParentSize()) {
+                            val head = Offset(size.width * 374f / 512f, size.height * 178f / 512f)
+                            drawCircle(
+                                Brush.radialGradient(listOf(Color(0xFFA68BFF).copy(alpha = 0.6f * glow), Color.Transparent), head, size.width * 0.27f),
+                                radius = size.width * 0.27f, center = head,
+                            )
+                        }
+                    }
+                    Image(painterResource(R.drawable.ic_lumvane_vane), null, Modifier.matchParentSize())
+                }
+                VpnState.Stopped, VpnState.Stopping -> Icon(painterResource(R.drawable.ic_lumvane_logo), null, turn)
                 is VpnState.Error -> Icon(Icons.Filled.Warning, null, Modifier.size(104.dp))
             }
         }

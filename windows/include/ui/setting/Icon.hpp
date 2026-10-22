@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QColor>
 #include <QIcon>
 #include <QPixmap>
 #include <QRectF>
@@ -24,7 +25,7 @@ namespace Icon {
 
     QIcon App();
 
-    void PaintVane(QPainter &p, const QRectF &box);
+    void PaintVane(QPainter &p, const QRectF &box, qreal swing = 0, const QColor &mono = QColor(), qreal glow = 0);
 
     QIcon Vane();
 

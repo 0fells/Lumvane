@@ -13,6 +13,8 @@ class StartStopButton : public QToolButton {
     Q_PROPERTY(qreal dim READ dim WRITE setDim)
     Q_PROPERTY(qreal press READ press WRITE setPress)
     Q_PROPERTY(QColor ringColor READ ringColor WRITE setRingColor)
+    Q_PROPERTY(qreal sway READ sway WRITE setSway)
+    Q_PROPERTY(qreal gust READ gust WRITE setGust)
 
 public:
     enum class State { Disabled, Idle, Connecting, Running, Disconnecting };
@@ -42,6 +44,10 @@ public:
     void setPress(qreal v) { m_press = v; update(); }
     QColor ringColor() const { return m_ringColor; }
     void setRingColor(const QColor &c) { m_ringColor = c; update(); }
+    qreal sway() const { return m_sway; }
+    void setSway(qreal v) { m_sway = v; update(); }
+    qreal gust() const { return m_gust; }
+    void setGust(qreal v) { m_gust = v; update(); }
 
 protected:
     void paintEvent(QPaintEvent *) override;
@@ -65,6 +71,8 @@ private:
     Mode m_mode = Mode::Off;
 
     qreal m_morph = 0.0;
+    qreal m_sway = 0.0;
+    qreal m_gust = 1.0;
     qreal m_spin = 0.0;
     qreal m_dim = 1.0;
     qreal m_press = 0.0;
@@ -75,6 +83,8 @@ private:
     QPropertyAnimation *m_pressAnim = nullptr;
     QPropertyAnimation *m_ringColorAnim = nullptr;
     QPropertyAnimation *m_spinAnim = nullptr;
+    QPropertyAnimation *m_swayAnim = nullptr;
+    QPropertyAnimation *m_gustAnim = nullptr;
 
     bool m_shown = false;
 
