@@ -799,7 +799,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     tray = new QSystemTrayIcon(nullptr);
     tray->setIcon(GetTrayIcon(Icon::NONE));
-    QApplication::setWindowIcon(Icon::App());
+    QApplication::setWindowIcon(Icon::Vane());
+    setWindowIcon(Icon::App());
+    Icon::UseVaneForOtherWindows(this);
     trayMenu = new QMenu();
     trayMenu->addAction(ui->actionShow_window);
     trayStartStop = new QAction(tr("Connect"), trayMenu);

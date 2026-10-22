@@ -9,6 +9,7 @@
 #include <QPainterPath>
 #include <QSettings>
 
+#include "include/ui/setting/Icon.hpp"
 #include "include/ui/setting/ThemeManager.hpp"
 
 #ifdef Q_OS_WIN
@@ -205,25 +206,7 @@ void TitleBar::paintEvent(QPaintEvent *) {
         p.fillRect(QRectF(0, 0, width(), 1.0 / devicePixelRatioF()), windows10BorderColor(frameActive()));
     }
 #endif
-    const QColor tail("#5C7CFF"), shaft("#6A4FE6"), head("#A68BFF");
-    p.save();
-    p.translate(logo.center());
-    p.scale(logo.width() / 390.0, logo.width() / 390.0);
-    p.translate(-253, -268);
-    p.translate(256, 256);
-    p.rotate(-30);
-    p.translate(-256, -256);
-    p.setPen(Qt::NoPen);
-    p.setBrush(tail);
-    p.drawPolygon(QPolygonF({{64, 214}, {150, 214}, {176, 256}, {150, 298}, {64, 298}, {98, 256}}));
-    p.setBrush(shaft);
-    p.drawRoundedRect(QRectF(150, 240, 220, 32), 16, 16);
-    p.setBrush(head);
-    p.drawPolygon(QPolygonF({{352, 192}, {460, 256}, {352, 320}}));
-    p.setBrush(tk.surface);
-    p.setPen(QPen(shaft, 18));
-    p.drawEllipse(QPointF(256, 256), 34, 34);
-    p.restore();
+    Icon::PaintVane(p, logo);
 
     const int textLeft = qRound(logo.right()) + 10;
     const QRect textRect(textLeft, 0, minimize_->x() - textLeft - 8, height());

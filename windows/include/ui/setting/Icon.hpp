@@ -2,6 +2,10 @@
 
 #include <QIcon>
 #include <QPixmap>
+#include <QRectF>
+
+class QPainter;
+class QWidget;
 
 namespace Icon {
 
@@ -19,4 +23,10 @@ namespace Icon {
     QPixmap GetTrayIcon(TrayIconStatus status);
 
     QIcon App();
+
+    void PaintVane(QPainter &p, const QRectF &box);
+
+    QIcon Vane();
+
+    void UseVaneForOtherWindows(QWidget *mainWindow);
 }

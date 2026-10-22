@@ -42,7 +42,7 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
@@ -314,13 +314,11 @@ private fun StatusText(state: VpnState) {
     )
 }
 
-private val AppIconTile = Color(0xFF221A4D)
-
 @Composable
 private fun ConnectButton(state: VpnState, onClick: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
     val container = when (state) {
-        VpnState.Started -> AppIconTile
+        VpnState.Started -> scheme.surfaceContainerHigh
         is VpnState.Error -> scheme.errorContainer
         VpnState.Starting, VpnState.Stopping -> scheme.tertiaryContainer
         VpnState.Stopped -> scheme.surfaceVariant
@@ -334,6 +332,7 @@ private fun ConnectButton(state: VpnState, onClick: () -> Unit) {
     val label = stringResource(if (state is VpnState.Started || state == VpnState.Starting) R.string.action_disconnect else R.string.action_connect)
     Surface(
         onClick = onClick, shape = CircleShape, color = container, contentColor = content,
+        border = if (state == VpnState.Started) BorderStroke(4.dp, scheme.primary) else null,
         shadowElevation = 6.dp,
         modifier = Modifier.size(208.dp).semantics { contentDescription = label },
     ) {

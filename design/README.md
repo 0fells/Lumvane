@@ -24,9 +24,9 @@
 
 Жирная форма для 32 px и меньше, трея и монохрома: древко `150,236` 220x40 со скруглением 20, наконечник `352,186 466,256 352,326`, ось сплошным кругом радиусом 40.
 
-Значок в трее меняет цвет по режиму (хвост и остальной флюгер): работает `#5BD68A`/`#14A050`, выключено `#9AA0A8`/`#6B7178`, прокси `#4DA3FF`/`#1F6FE5`, DNS `#B48CFF`/`#7C4DFF`, прокси и DNS `#B48CFF`/`#1F6FE5`, Tun `#FF6B6B`/`#D92B2B`. Окно и панель задач всегда показывают иконку `App.png` с плиткой. В заголовке окна флюгер без плитки рисуется вектором (`windows/src/ui/widget/TitleBar.cpp`) в средних тонах, которые видны и на светлом, и на тёмном фоне: хвост `#5C7CFF`, древко и колечко оси `#6A4FE6`, наконечник `#A68BFF`; древко 32 и колечко 18 чуть толще, чем в большой иконке. В обеих темах он одинаковый, цвет фона берёт только середина колечка.
+Значок в трее меняет цвет по режиму (хвост и остальной флюгер): работает `#5BD68A`/`#14A050`, выключено `#9AA0A8`/`#6B7178`, прокси `#4DA3FF`/`#1F6FE5`, DNS `#B48CFF`/`#7C4DFF`, прокси и DNS `#B48CFF`/`#1F6FE5`, Tun `#FF6B6B`/`#D92B2B`. Кнопка главного окна на панели задач и exe показывают иконку с плиткой (`App.png`, `Lumvane.ico`). В заголовках всех окон флюгер без плитки (`Icon::PaintVane` в `windows/src/ui/setting/Icon.cpp`: главное окно рисует его само, диалоги получают его как иконку окна) в средних тонах, которые видны и на светлом, и на тёмном фоне: хвост `#5C7CFF`, древко и колечко оси `#6A4FE6`, наконечник `#A68BFF`; древко 32 и колечко 18 чуть толще, чем в большой иконке, середина колечка прозрачная. В обеих темах он одинаковый.
 
-На Android кнопка подключения во включённом состоянии повторяет иконку: флюгер в своих цветах (`ic_lumvane_vane.xml`) на цвете плитки; в выключенном — серый силуэт той же формы (`ic_lumvane_logo.xml`).
+На Android кнопка подключения во включённом состоянии — флюгер в тех же средних тонах (`ic_lumvane_vane.xml`) на поверхности темы с обводкой основного цвета; в выключенном — серый силуэт той же формы (`ic_lumvane_logo.xml`).
 
 Акцент интерфейса под иконку: `#5B3FD6` в светлой теме, `#A996FF` в тёмной.
 
@@ -63,9 +63,9 @@ Parts on the 512 grid before the turn; the whole vane is turned -30 degrees abou
 
 Bold form for 32 px and below, the tray and monochrome: shaft `150,236` 220x40 with corner radius 20, head `352,186 466,256 352,326`, pivot as a solid circle of radius 40.
 
-The tray icon changes colour by mode (tail and the rest of the vane): running `#5BD68A`/`#14A050`, off `#9AA0A8`/`#6B7178`, proxy `#4DA3FF`/`#1F6FE5`, DNS `#B48CFF`/`#7C4DFF`, proxy and DNS `#B48CFF`/`#1F6FE5`, Tun `#FF6B6B`/`#D92B2B`. The window and the taskbar always show `App.png` with the tile. The title bar draws the vane without the tile as vectors (`windows/src/ui/widget/TitleBar.cpp`) in mid tones that read on both the light and the dark bar: tail `#5C7CFF`, shaft and pivot ring `#6A4FE6`, head `#A68BFF`; shaft 32 and ring 18 are a little thicker than in the large icon. It is the same in both themes; only the middle of the ring takes the bar colour.
+The tray icon changes colour by mode (tail and the rest of the vane): running `#5BD68A`/`#14A050`, off `#9AA0A8`/`#6B7178`, proxy `#4DA3FF`/`#1F6FE5`, DNS `#B48CFF`/`#7C4DFF`, proxy and DNS `#B48CFF`/`#1F6FE5`, Tun `#FF6B6B`/`#D92B2B`. The main window's taskbar button and the exe show the icon with the tile (`App.png`, `Lumvane.ico`). The title bars of all windows show the vane without the tile (`Icon::PaintVane` in `windows/src/ui/setting/Icon.cpp`: the main window draws it itself, the dialogs get it as their window icon) in mid tones that read on both the light and the dark bar: tail `#5C7CFF`, shaft and pivot ring `#6A4FE6`, head `#A68BFF`; shaft 32 and ring 18 are a little thicker than in the large icon, the middle of the ring is transparent. It is the same in both themes.
 
-On Android the connect button, when connected, repeats the icon: the vane in its own colours (`ic_lumvane_vane.xml`) on the tile colour; when off, a grey silhouette of the same shape (`ic_lumvane_logo.xml`).
+On Android the connect button, when connected, shows the vane in the same mid tones (`ic_lumvane_vane.xml`) on a surface of the theme, ringed in the primary colour; when off, a grey silhouette of the same shape (`ic_lumvane_logo.xml`).
 
 UI accent to match the icon: `#5B3FD6` in the light theme, `#A996FF` in the dark one.
 
