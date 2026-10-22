@@ -70,7 +70,14 @@ if (-not $SkipCpp) {
 
     Copy-Item (Join-Path $build 'Lumvane.exe') $deploy -Force
     Step 'Bundling Qt runtime (windeployqt)'
-    windeployqt --release --no-translations --no-system-d3d-compiler --no-opengl-sw (Join-Path $deploy 'Lumvane.exe')
+    windeployqt --release --no-translations --no-system-d3d-compiler --no-system-dxc-compiler `
+        --no-opengl-sw --no-compiler-runtime (Join-Path $deploy 'Lumvane.exe')
+    if ($LASTEXITCODE) { throw 'windeployqt failed' }
+    Remove-Item (Join-Path $deploy 'vc_redist.x64.exe'), (Join-Path $deploy 'dxcompiler.dll'),
+        (Join-Path $deploy 'dxil.dll') -ErrorAction SilentlyContinue
+    $crt = Join-Path $env:VCToolsRedistDir 'x64\Microsoft.VC143.CRT'
+    'msvcp140.dll', 'msvcp140_1.dll', 'msvcp140_2.dll', 'vcruntime140.dll', 'vcruntime140_1.dll' |
+        ForEach-Object { Copy-Item (Join-Path $crt $_) $deploy -Force }
 }
 
 Step 'Collecting licenses'

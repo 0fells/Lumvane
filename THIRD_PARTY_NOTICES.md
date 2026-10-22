@@ -43,7 +43,7 @@ Windows-версия включает изменённый код других �
 | [Noto Color Emoji](https://github.com/googlefonts/noto-emoji), Google | `windows/res/font/NotoColorEmoji.ttf` | SIL OFL 1.1 ([licenses/OFL-1.1.txt](licenses/OFL-1.1.txt)) |
 | [Twemoji](https://github.com/jdecked/twemoji), Twitter, Inc и другие участники | `windows/res/font/TwemojiCOLR.ttf` (шрифт COLR из графики Twemoji) | графика CC-BY 4.0 (https://creativecommons.org/licenses/by/4.0/) |
 | [Material Design Icons](https://pictogrammers.com/library/mdi/), Pictogrammers | `windows/res/icon/material` | Apache-2.0 ([licenses/Apache-2.0.txt](licenses/Apache-2.0.txt)) |
-| Microsoft Visual C++ Redistributable (`vc_redist.x64.exe`), DirectX Shader Compiler (`dxcompiler.dll`, `dxil.dll`) | только в готовой сборке, добавляет `windeployqt` | распространяемые компоненты Microsoft по условиям Visual Studio и Windows SDK |
+| Библиотеки среды выполнения Microsoft Visual C++ (`msvcp140*.dll`, `vcruntime140*.dll`) | только в готовой сборке | распространяемые компоненты Microsoft по условиям Visual Studio |
 
 ## Android-версия
 
@@ -99,7 +99,7 @@ The Windows version includes modified code of other projects distributed under t
 | [Noto Color Emoji](https://github.com/googlefonts/noto-emoji), Google | `windows/res/font/NotoColorEmoji.ttf` | SIL OFL 1.1 ([licenses/OFL-1.1.txt](licenses/OFL-1.1.txt)) |
 | [Twemoji](https://github.com/jdecked/twemoji), Twitter, Inc and other contributors | `windows/res/font/TwemojiCOLR.ttf` (a COLR font built from Twemoji graphics) | graphics CC-BY 4.0 (https://creativecommons.org/licenses/by/4.0/) |
 | [Material Design Icons](https://pictogrammers.com/library/mdi/), Pictogrammers | `windows/res/icon/material` | Apache-2.0 ([licenses/Apache-2.0.txt](licenses/Apache-2.0.txt)) |
-| Microsoft Visual C++ Redistributable (`vc_redist.x64.exe`), DirectX Shader Compiler (`dxcompiler.dll`, `dxil.dll`) | release build only, added by `windeployqt` | Microsoft redistributable components under the Visual Studio and Windows SDK terms |
+| Microsoft Visual C++ runtime libraries (`msvcp140*.dll`, `vcruntime140*.dll`) | release build only | Microsoft redistributable components under the Visual Studio terms |
 
 ## Android version
 
