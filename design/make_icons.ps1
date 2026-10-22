@@ -9,7 +9,6 @@ $GEO = @{
 }
 
 $BRAND = @{ tile = '#221A4D'; tail = '#5C7CFF'; shaft = '#F3EEFF'; head = '#B79CFF' }
-$MARK = @{ tail = '#5C7CFF'; body = '#6E54E8'; head = '#9D7DFF' }
 $STATES = [ordered]@{
     'Running'   = '#5BD68A', '#14A050'
     'Off'       = '#9AA0A8', '#6B7178'
@@ -63,14 +62,6 @@ function RenderState($px, $c) {
     DrawVane $g 'bold' (Col $c[0]) (Col $c[1]) (Col $c[1]) $null
     $g.Dispose(); $bmp
 }
-
-function RenderMark($px) {
-    $bmp, $g = NewCanvas $px
-    $g.TranslateTransform(270, 242); $g.ScaleTransform(1.18, 1.18); $g.TranslateTransform(-265, -256)
-    DrawVane $g 'bold' (Col $MARK.tail) (Col $MARK.body) (Col $MARK.head) $null
-    $g.Dispose(); $bmp
-}
-
 function RenderTile($px) {
     $bmp, $g = NewCanvas $px
     $g.FillPath((Brush (Col $BRAND.tile)), (RoundRect 16 16 480 480 112))
@@ -116,7 +107,6 @@ foreach ($name in $STATES.Keys) {
 }
 (RenderTile 256).Save((Join-Path $res 'public\App.png'), [System.Drawing.Imaging.ImageFormat]::Png)
 (RenderTile 32).Save((Join-Path $res 'public\App-32.png'), [System.Drawing.Imaging.ImageFormat]::Png)
-foreach ($s in 24, 48, 128) { (RenderMark $s).Save((Join-Path $res "public\Mark-$s.png"), [System.Drawing.Imaging.ImageFormat]::Png) }
 WriteIco (Join-Path $res 'Lumvane.ico') @(16, 20, 24, 32, 40, 48, 64, 96, 128, 256)
 (RenderTile 512).Save((Join-Path $PSScriptRoot 'icon-512.png'), [System.Drawing.Imaging.ImageFormat]::Png)
 "ok: windows\res\Lumvane.ico, windows\res\public\*.png, design\icon-512.png"

@@ -19,6 +19,4 @@ namespace Icon {
     QPixmap GetTrayIcon(TrayIconStatus status);
 
     QIcon App();
-
-    QIcon Mark();
 }

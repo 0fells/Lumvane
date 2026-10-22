@@ -42,6 +42,8 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.Image
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -312,11 +314,13 @@ private fun StatusText(state: VpnState) {
     )
 }
 
+private val AppIconTile = Color(0xFF221A4D)
+
 @Composable
 private fun ConnectButton(state: VpnState, onClick: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
     val container = when (state) {
-        VpnState.Started -> scheme.primary
+        VpnState.Started -> AppIconTile
         is VpnState.Error -> scheme.errorContainer
         VpnState.Starting, VpnState.Stopping -> scheme.tertiaryContainer
         VpnState.Stopped -> scheme.surfaceVariant
@@ -336,8 +340,8 @@ private fun ConnectButton(state: VpnState, onClick: () -> Unit) {
         Box(contentAlignment = Alignment.Center) {
             when (state) {
                 VpnState.Starting, VpnState.Stopping -> CircularProgressIndicator(Modifier.size(88.dp), color = content)
-                VpnState.Started, VpnState.Stopped ->
-                    Icon(painterResource(R.drawable.ic_lumvane_logo), null, Modifier.size(104.dp))
+                VpnState.Started -> Image(painterResource(R.drawable.ic_lumvane_vane), null, Modifier.size(150.dp))
+                VpnState.Stopped -> Icon(painterResource(R.drawable.ic_lumvane_logo), null, Modifier.size(150.dp))
                 is VpnState.Error -> Icon(Icons.Filled.Warning, null, Modifier.size(104.dp))
             }
         }

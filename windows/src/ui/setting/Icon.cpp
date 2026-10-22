@@ -105,9 +105,3 @@ QIcon Icon::App() {
     icon.addFile(":/Lumvane/App.png");
     return icon;
 }
-
-QIcon Icon::Mark() {
-    QIcon icon;
-    for (const int px : {24, 48, 128}) icon.addFile(QStringLiteral(":/Lumvane/Mark-%1.png").arg(px));
-    return icon;
-}

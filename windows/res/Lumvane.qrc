@@ -35,9 +35,6 @@
     <qresource prefix="/Lumvane">
         <file alias="App.png">public/App.png</file>
         <file alias="App-32.png">public/App-32.png</file>
-        <file alias="Mark-24.png">public/Mark-24.png</file>
-        <file alias="Mark-48.png">public/Mark-48.png</file>
-        <file alias="Mark-128.png">public/Mark-128.png</file>
         <file alias="Running.png">public/Running.png</file>
         <file alias="Dns.png">public/Dns.png</file>
         <file alias="Off.png">public/Off.png</file>
