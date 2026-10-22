@@ -36,10 +36,13 @@ jobs:
           go-version: '1.27.0'
           cache-dependency-path: core/*/go.sum
 
-      - uses: arduino/setup-protoc@v3
-        with:
-          version: '31.1'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install protoc
+        shell: pwsh
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP 'protoc'
+          Invoke-WebRequest https://github.com/protocolbuffers/protobuf/releases/download/v31.1/protoc-31.1-win64.zip -OutFile "$dir.zip"
+          Expand-Archive "$dir.zip" $dir
+          "$dir\bin" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
 
       - name: Generate gRPC code
         shell: pwsh
