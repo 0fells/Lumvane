@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Lumvane</string>
+    <string name="tab_profiles">Профили</string>
+    <string name="tab_groups">Группы</string>
+    <string name="tab_routes">Маршруты</string>
+    <string name="tab_log">Журнал</string>
+    <string name="tab_settings">Настройки</string>
+    <string name="placeholder_screen">%1$s: скоро будет</string>
+</resources>

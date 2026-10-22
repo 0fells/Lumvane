@@ -1,0 +1,75 @@
+#pragma once
+
+#include <QDialog>
+#include <QMenu>
+
+#include <atomic>
+
+#include "include/ui/widget/AutoCompleteTextEdit.hpp"
+#include "include/global/Configs.hpp"
+#include "include/ui/setting/RouteItem.h"
+#include "ui_dialog_manage_routes.h"
+#include "include/database/entities/RouteProfile.h"
+
+QT_BEGIN_NAMESPACE
+namespace Ui {
+    class DialogManageRoutes;
+}
+QT_END_NAMESPACE
+
+class DialogManageRoutes : public QDialog {
+    Q_OBJECT
+
+public:
+    explicit DialogManageRoutes(QWidget *parent = nullptr);
+
+    ~DialogManageRoutes() override;
+
+private:
+    Ui::DialogManageRoutes *ui;
+
+    RouteItem* routeChainWidget;
+
+    void reloadProfileItems();
+
+    void applyImportedProfile(const std::shared_ptr<Configs::RouteProfile>& profile, bool wasOldArray);
+
+    bool tryImportRemoteRoutesLink(const QString& text);
+
+    void updateRemoteProfiles(const QList<std::shared_ptr<Configs::RouteProfile>>& profiles);
+
+    bool routeUpdateRunning = false;
+    std::atomic<bool> routeUpdateCancel{false};
+
+    QList<std::shared_ptr<Configs::RouteProfile>> chainList;
+
+    std::shared_ptr<Configs::RouteProfile> currentRoute;
+
+    int tooltipID = 0;
+
+    void set_dns_hijack_enability(bool enable) const;
+
+    static bool validate_dns_rules(const QString &rawString);
+
+    QShortcut* deleteShortcut;
+
+    AutoCompleteTextEdit* rule_editor;
+public slots:
+    void accept() override;
+
+    void updateCurrentRouteProfile(int idx);
+
+    void on_new_route_clicked();
+
+    void on_export_route_clicked();
+
+    void on_import_route_clicked();
+
+    void on_clone_route_clicked();
+
+    void on_edit_route_clicked();
+
+    void on_delete_route_clicked();
+
+    void on_update_route_clicked();
+};

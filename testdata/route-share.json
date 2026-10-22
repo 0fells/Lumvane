@@ -1,0 +1,14 @@
+{
+  "kind": "lumvane-route-profile",
+  "v": 1,
+  "name": "Shared",
+  "default_outbound": "direct",
+  "rules": [
+    {"ip_version": 4, "port": [443, 8443], "source_port": [1000], "domain_suffix": ["example.com"],
+     "action": "route", "outbound": "proxy", "override_port": 8080, "name": "ports", "type": "custom"},
+    {"domain": ["ads.example.com"], "action": "reject", "reject_method": "drop", "name": "reject", "type": "custom"},
+    {"rule_set": ["geosite-category-ads-all"], "action": "route", "outbound": "direct",
+     "name": "Simple Address Bypass", "type": "simple_address_bypass"},
+    {"domain": ["x.example.com"], "action": "route", "outbound": "Missing Server", "name": "missing", "type": "custom"}
+  ]
+}

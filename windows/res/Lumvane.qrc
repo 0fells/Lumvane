@@ -1,0 +1,49 @@
+<RCC>
+    <qresource prefix="/">
+        <file>icon/ui/program.svg</file>
+        <file>icon/ui/settings.svg</file>
+        <file>icon/ui/groups.svg</file>
+        <file>icon/ui/routing.svg</file>
+        <file>icon/ui/tools.svg</file>
+        <file>icon/ui/qss-chevron-down.svg</file>
+        <file>icon/ui/qss-chevron-up.svg</file>
+        <file>icon/ui/qss-check-off.svg</file>
+        <file>icon/ui/qss-check-on-dark.svg</file>
+        <file>icon/ui/qss-check-on-light.svg</file>
+        <file>icon/ui/qss-check-hover-dark.svg</file>
+        <file>icon/ui/qss-check-hover-light.svg</file>
+        <file>icon/ui/qss-check-disabled-dark.svg</file>
+        <file>icon/ui/qss-check-disabled-light.svg</file>
+        <file>icon/ui/qss-check-on-disabled-dark.svg</file>
+        <file>icon/ui/qss-check-on-disabled-light.svg</file>
+        <file>icon/ui/qss-check-mixed-dark.svg</file>
+        <file>icon/ui/qss-check-mixed-light.svg</file>
+        <file>icon/ui/empty-profiles.svg</file>
+        <file>icon/ui/search.svg</file>
+        <file>icon/ui/chevron-down.svg</file>
+        <file>icon/ui/chevron-up.svg</file>
+        <file>icon/ui/clear.svg</file>
+        <file>theme/lumvane.qss</file>
+        <file>icon/material/lock-open-outline.png</file>
+        <file>icon/material/lock-outline.png</file>
+        <file>icon/material/cancel.png</file>
+        <file>icon/material/history.png</file>
+        <file>icon/material/swap-vertical.png</file>
+        <file>icon/material/delete.png</file>
+        <file>icon/material/swap-horizontal.png</file>
+    </qresource>
+    <qresource prefix="/Lumvane">
+        <file alias="App.png">public/App.png</file>
+        <file alias="App-32.png">public/App-32.png</file>
+        <file alias="Mark-24.png">public/Mark-24.png</file>
+        <file alias="Mark-48.png">public/Mark-48.png</file>
+        <file alias="Mark-128.png">public/Mark-128.png</file>
+        <file alias="Running.png">public/Running.png</file>
+        <file alias="Dns.png">public/Dns.png</file>
+        <file alias="Off.png">public/Off.png</file>
+        <file alias="Proxy.png">public/Proxy.png</file>
+        <file alias="Proxy-Dns.png">public/Proxy-Dns.png</file>
+        <file alias="Tun.png">public/Tun.png</file>
+        <file>dashboard-notice.html</file>
+    </qresource>
+</RCC>

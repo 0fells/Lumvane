@@ -1,0 +1,163 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  GOTOOLCHAIN: go1.27.0
+  WIN_TAGS: with_clash_api,with_gvisor,with_quic,with_wireguard,with_utls,with_dhcp,with_tailscale,badlinkname,tfogo_checklinkname0,with_purego,with_naive_outbound
+  ANDROID_TAGS: with_gvisor,with_quic,with_dhcp,with_wireguard,with_utls,with_clash_api,with_tailscale,badlinkname,tfogo_checklinkname0
+
+jobs:
+  core:
+    name: Go cores
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.0'
+          cache-dependency-path: core/*/go.sum
+
+      - uses: arduino/setup-protoc@v3
+        with:
+          version: '31.1'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate gRPC code
+        shell: pwsh
+        working-directory: core/windows/gen
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.11
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.2
+          $env:PATH = "$(go env GOPATH)\bin;$env:PATH"
+          protoc -I . --go_out=. --go-grpc_out=. libcore.proto
+
+      - name: Shared module
+        shell: pwsh
+        working-directory: core/shared
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          go vet -tags $env:WIN_TAGS ./...
+          $env:GOOS = 'android'; $env:GOARCH = 'arm64'
+          go vet -tags $env:ANDROID_TAGS ./...
+          Remove-Item env:GOOS, env:GOARCH
+          go test -count=1 ./...
+
+      - name: Windows core
+        shell: pwsh
+        working-directory: core/windows
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          go build -o $env:RUNNER_TEMP\LumvaneCore.exe -trimpath -ldflags=-checklinkname=0 -tags $env:WIN_TAGS .
+          go vet -tags $env:WIN_TAGS ./...
+          go test -count=1 -ldflags=-checklinkname=0 -tags $env:WIN_TAGS .
+
+      - name: Android core
+        shell: pwsh
+        working-directory: core/android
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          go test -count=1 -ldflags=-checklinkname=0 -tags $env:ANDROID_TAGS ./lumcore/
+          $env:GOOS = 'android'; $env:GOARCH = 'arm64'
+          go build -ldflags=-checklinkname=0 -tags $env:ANDROID_TAGS ./...
+          go vet -tags $env:ANDROID_TAGS ./...
+
+  android:
+    name: Android unit tests
+    runs-on: ubuntu-latest
+    env:
+      NDK_VERSION: 27.3.13750724
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.0'
+          cache-dependency-path: core/android/go.sum
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Android NDK
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$NDK_VERSION" > /dev/null
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
+
+      - name: Go core (gomobile)
+        working-directory: core/android
+        run: |
+          go install github.com/sagernet/gomobile/cmd/gomobile@v0.1.12
+          go install github.com/sagernet/gomobile/cmd/gobind@v0.1.12
+          export PATH="$(go env GOPATH)/bin:$PATH"
+          gomobile init
+          mkdir -p ../../android/app/libs
+          GOFLAGS=-mod=mod gomobile bind -v -o ../../android/app/libs/lumcore.aar -target android/arm64 -androidapi 26 \
+            -javapkg com.lumvane -libname lumcore -tags "$ANDROID_TAGS" -trimpath -ldflags "-checklinkname=0" ./lumcore
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Unit tests
+        working-directory: android
+        run: bash ./gradlew testDebugUnitTest --no-daemon
+
+      - name: Test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-test-reports
+          path: android/app/build/reports/tests/
+
+  gui:
+    name: Windows GUI tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.3'
+          arch: win64_msvc2022_64
+          cache: true
+
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      - uses: seanmiddleditch/gha-setup-ninja@v5
+
+      - name: Build
+        shell: pwsh
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          New-Item -ItemType Directory -Force windows\build\tests | Out-Null
+          Copy-Item windows\res\srslist.h windows\build\tests -Force
+          cmake -S windows -B windows\build\tests -G Ninja -DCMAKE_BUILD_TYPE=Release -DLUMVANE_TESTS=ON
+          cmake --build windows\build\tests --target lumvane_tests
+
+      - name: Run
+        shell: pwsh
+        working-directory: windows/build/tests
+        run: |
+          .\lumvane_tests.exe -platform offscreen -o test-results.txt,txt
+          $code = $LASTEXITCODE
+          Get-Content test-results.txt
+          exit $code

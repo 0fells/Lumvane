@@ -1,0 +1,114 @@
+[
+  {
+    "name": "vless reality goes to xray by default",
+    "link": "vless://00000000-0000-4000-8000-000000000001@192.0.2.10:443?encryption=none&flow=xtls-rprx-vision&security=reality&sni=example.com&fp=chrome&pbk=q0KuF4o4a5QxVQ6PrjWQcMiOlAeS4hzmNa4VU2Zl3Fc&sid=ab12&type=tcp#vl",
+    "engine": "xray"
+  },
+  {
+    "name": "vless xhttp goes to xray",
+    "link": "vless://00000000-0000-4000-8000-000000000001@192.0.2.10:443?encryption=none&security=tls&sni=example.com&type=xhttp&path=%2Fx#vx",
+    "engine": "xray"
+  },
+  {
+    "name": "vless vision tls utls",
+    "link": "vless://00000000-0000-4000-8000-000000000005@192.0.2.21:443?encryption=none&flow=xtls-rprx-vision&security=tls&sni=example.com&fp=firefox&type=tcp#vt",
+    "expect": {
+      "type": "vless", "server": "192.0.2.21", "server_port": 443,
+      "uuid": "00000000-0000-4000-8000-000000000005", "flow": "xtls-rprx-vision",
+      "tls": {"enabled": true, "server_name": "example.com", "utls": {"enabled": true, "fingerprint": "firefox"}}
+    }
+  },
+  {
+    "name": "vless ws tls",
+    "link": "vless://00000000-0000-4000-8000-000000000002@192.0.2.11:8443?encryption=none&security=tls&sni=example.com&type=ws&path=%2Fws&host=cdn.example.com#vw",
+    "expect": {
+      "type": "vless", "server": "192.0.2.11", "server_port": 8443,
+      "uuid": "00000000-0000-4000-8000-000000000002",
+      "tls": {"enabled": true, "server_name": "example.com"},
+      "transport": {"type": "ws", "path": "/ws", "headers": {"Host": "cdn.example.com"}}
+    }
+  },
+  {
+    "name": "vmess base64 json ws tls",
+    "link": "vmess://eyJ2IjoiMiIsInBzIjoidm0iLCJhZGQiOiIxOTIuMC4yLjEyIiwicG9ydCI6IjQ0MyIsImlkIjoiMDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDAzIiwiYWlkIjoiMCIsInNjeSI6ImF1dG8iLCJuZXQiOiJ3cyIsInR5cGUiOiJub25lIiwiaG9zdCI6ImNkbi5leGFtcGxlLmNvbSIsInBhdGgiOiIvdm0iLCJ0bHMiOiJ0bHMiLCJzbmkiOiJleGFtcGxlLmNvbSJ9",
+    "expect": {
+      "type": "vmess", "server": "192.0.2.12", "server_port": 443,
+      "uuid": "00000000-0000-4000-8000-000000000003",
+      "tls": {"enabled": true, "server_name": "example.com"},
+      "transport": {"type": "ws", "path": "/vm", "headers": {"Host": "cdn.example.com"}}
+    }
+  },
+  {
+    "name": "trojan grpc",
+    "link": "trojan://secret@192.0.2.13:443?security=tls&sni=example.com&type=grpc&serviceName=svc#tr",
+    "expect": {
+      "type": "trojan", "server": "192.0.2.13", "server_port": 443, "password": "secret",
+      "tls": {"enabled": true, "server_name": "example.com"},
+      "transport": {"type": "grpc", "service_name": "svc"}
+    }
+  },
+  {
+    "name": "shadowsocks sip002",
+    "link": "ss://YWVzLTI1Ni1nY206cGFzcw@192.0.2.14:8388#ss",
+    "expect": {
+      "type": "shadowsocks", "server": "192.0.2.14", "server_port": 8388,
+      "method": "aes-256-gcm", "password": "pass"
+    }
+  },
+  {
+    "name": "hysteria2 salamander",
+    "link": "hysteria2://pw@192.0.2.15:443?sni=example.com&obfs=salamander&obfs-password=o&insecure=1#hy2",
+    "expect": {
+      "type": "hysteria2", "server": "192.0.2.15", "server_port": 443, "password": "pw",
+      "obfs": {"type": "salamander", "password": "o"},
+      "tls": {"enabled": true, "server_name": "example.com", "insecure": true}
+    }
+  },
+  {
+    "name": "hysteria v1 with windows",
+    "link": "hysteria://192.0.2.16:443?protocol=udp&auth=a&peer=example.com&upmbps=10&downmbps=50&recv_window=100&recv_window_conn=200#hy1",
+    "expect": {
+      "type": "hysteria", "server": "192.0.2.16", "server_port": 443,
+      "up_mbps": 10, "down_mbps": 50,
+      "stream_receive_window": 100, "connection_receive_window": 200,
+      "tls": {"enabled": true, "server_name": "example.com"}
+    },
+    "absent": ["recv_window", "recv_window_conn", "disable_mtu_discovery"]
+  },
+  {
+    "name": "tuic v5",
+    "link": "tuic://00000000-0000-4000-8000-000000000004:pw@192.0.2.17:443?congestion_control=bbr&udp_relay_mode=native&sni=example.com&alpn=h3#tu",
+    "expect": {
+      "type": "tuic", "server": "192.0.2.17", "server_port": 443,
+      "uuid": "00000000-0000-4000-8000-000000000004", "password": "pw",
+      "congestion_control": "bbr", "udp_relay_mode": "native",
+      "tls": {"enabled": true, "server_name": "example.com", "alpn": ["h3"]}
+    }
+  },
+  {
+    "name": "socks5 with auth",
+    "link": "socks5://user:pass@192.0.2.18:1080#so",
+    "expect": {
+      "type": "socks", "server": "192.0.2.18", "server_port": 1080,
+      "username": "user", "password": "pass"
+    }
+  },
+  {
+    "name": "anytls",
+    "link": "anytls://pw@192.0.2.19:443?sni=example.com#at",
+    "expect": {
+      "type": "anytls", "server": "192.0.2.19", "server_port": 443, "password": "pw",
+      "tls": {"enabled": true, "server_name": "example.com"}
+    }
+  },
+  {
+    "name": "trusttunnel over quic has no spoof",
+    "link": "tt://user:pw@192.0.2.20:443?congestion_control=bbr&sni=example.com&tls_spoof=decoy.example.com#tq",
+    "expect": {
+      "type": "trusttunnel", "server": "192.0.2.20", "server_port": 443,
+      "username": "user", "password": "pw", "quic": true,
+      "tls": {"enabled": true, "server_name": "example.com"}
+    },
+    "absent": ["tls.spoof"]
+  }
+]

@@ -1,0 +1,360 @@
+#include "include/sys/windows/MiniDump.h"
+#include "include/global/Logger.hpp"
+#include "LumvaneVersion.h"
+
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#include <tchar.h>
+#include <dbghelp.h>
+
+#include <csignal>
+#include <cstdlib>
+#include <exception>
+
+typedef BOOL(WINAPI *MINIDUMPWRITEDUMP)(
+    HANDLE hProcess,
+    DWORD dwPid,
+    HANDLE hFile,
+    MINIDUMP_TYPE DumpType,
+    CONST PMINIDUMP_EXCEPTION_INFORMATION ExceptionParam,
+    CONST PMINIDUMP_USER_STREAM_INFORMATION UserStreamParam,
+    CONST PMINIDUMP_CALLBACK_INFORMATION CallbackParam);
+
+#if defined(_M_ARM64) || defined(__aarch64__)
+#define LUMVANE_ARCH L"arm64"
+#define LUMVANE_ARCH_A "arm64"
+#elif defined(_M_X64) || defined(__x86_64__)
+#define LUMVANE_ARCH L"amd64"
+#define LUMVANE_ARCH_A "amd64"
+#elif defined(_M_IX86) || defined(__i386__)
+#define LUMVANE_ARCH L"386"
+#define LUMVANE_ARCH_A "386"
+#else
+#define LUMVANE_ARCH L"unknown"
+#define LUMVANE_ARCH_A "unknown"
+#endif
+
+static const MINIDUMP_TYPE DUMP_TYPE = static_cast<MINIDUMP_TYPE>(
+    MiniDumpWithIndirectlyReferencedMemory |
+    MiniDumpWithDataSegs |
+    MiniDumpWithHandleData |
+    MiniDumpWithThreadInfo |
+    MiniDumpWithUnloadedModules |
+    MiniDumpWithProcessThreadData);
+
+#define LUMVANE_EXC_TERMINATE    0xE0544501
+#define LUMVANE_EXC_PURECALL     0xE0544502
+#define LUMVANE_EXC_INVALIDPARAM 0xE0544503
+#define LUMVANE_EXC_ABORT        0xE0544504
+#define LUMVANE_EXC_NEWFAIL      0xE0544505
+
+static const ULONG32 LUMVANE_LOG_STREAM = 0x10000;
+
+static wchar_t g_dumpPathTemplate[MAX_PATH] = L"";
+static bool g_crashDirReady = false;
+static LONG g_reporting = 0;
+static char g_logStream[128 * 1024];
+
+static const char *ExceptionName(DWORD code) {
+    switch (code) {
+        case EXCEPTION_ACCESS_VIOLATION: return "ACCESS_VIOLATION";
+        case EXCEPTION_ARRAY_BOUNDS_EXCEEDED: return "ARRAY_BOUNDS_EXCEEDED";
+        case EXCEPTION_DATATYPE_MISALIGNMENT: return "DATATYPE_MISALIGNMENT";
+        case EXCEPTION_FLT_DIVIDE_BY_ZERO: return "FLT_DIVIDE_BY_ZERO";
+        case EXCEPTION_ILLEGAL_INSTRUCTION: return "ILLEGAL_INSTRUCTION";
+        case EXCEPTION_IN_PAGE_ERROR: return "IN_PAGE_ERROR";
+        case EXCEPTION_INT_DIVIDE_BY_ZERO: return "INT_DIVIDE_BY_ZERO";
+        case EXCEPTION_INVALID_DISPOSITION: return "INVALID_DISPOSITION";
+        case EXCEPTION_NONCONTINUABLE_EXCEPTION: return "NONCONTINUABLE_EXCEPTION";
+        case EXCEPTION_PRIV_INSTRUCTION: return "PRIV_INSTRUCTION";
+        case EXCEPTION_STACK_OVERFLOW: return "STACK_OVERFLOW";
+        case 0xE06D7363: return "C++ exception (unhandled)";
+        case 0xC0000409: return "STACK_BUFFER_OVERRUN / __fastfail";
+        case 0xC0000374: return "HEAP_CORRUPTION";
+        case LUMVANE_EXC_TERMINATE: return "std::terminate (uncaught C++ exception)";
+        case LUMVANE_EXC_PURECALL: return "pure virtual call";
+        case LUMVANE_EXC_INVALIDPARAM: return "CRT invalid parameter";
+        case LUMVANE_EXC_ABORT: return "abort()";
+        case LUMVANE_EXC_NEWFAIL: return "operator new failed";
+        default: return "unknown";
+    }
+}
+
+static void HexPtrA(char out[17], const void *p) {
+    static const char digits[] = "0123456789ABCDEF";
+    const ULONG64 v = static_cast<ULONG64>(reinterpret_cast<ULONG_PTR>(p));
+    for (int i = 0; i < 16; ++i) out[i] = digits[(v >> ((15 - i) * 4)) & 0xF];
+    out[16] = '\0';
+}
+
+static void HexPtrW(wchar_t out[17], const void *p) {
+    char narrow[17];
+    HexPtrA(narrow, p);
+    for (int i = 0; i < 17; ++i) out[i] = static_cast<wchar_t>(narrow[i]);
+}
+
+static void AppendA(HANDLE file, const char *text) {
+    if (text == nullptr) return;
+    DWORD written = 0;
+    WriteFile(file, text, static_cast<DWORD>(lstrlenA(text)), &written, nullptr);
+}
+
+static ULONG32 BuildLogStream() {
+    static const QByteArray *lines[Logging::MAX_RECENT_LINES];
+    const int count = Logging::RecentLinesRaw(lines, Logging::MAX_RECENT_LINES);
+    ULONG32 used = 0;
+    for (int i = 0; i < count; ++i) {
+        if (lines[i] == nullptr) continue;
+        const int n = lines[i]->size();
+        if (used + static_cast<ULONG32>(n) + 2 >= sizeof(g_logStream)) break;
+        CopyMemory(g_logStream + used, lines[i]->constData(), n);
+        used += n;
+        g_logStream[used++] = '\r';
+        g_logStream[used++] = '\n';
+    }
+    return used;
+}
+
+static void WriteSidecar(const wchar_t *path, EXCEPTION_POINTERS *pException, bool dumpWritten) {
+    HANDLE file = CreateFileW(path, GENERIC_WRITE, FILE_SHARE_READ, nullptr,
+                              CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (file == INVALID_HANDLE_VALUE) return;
+
+    char line[1024];
+    SYSTEMTIME st;
+    GetLocalTime(&st);
+
+    AppendA(file, "Lumvane crash report\r\n===================\r\n");
+    wsprintfA(line, "time      : %04d-%02d-%02d %02d:%02d:%02d\r\n",
+              st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
+    AppendA(file, line);
+    AppendA(file, "version   : " LUMVANE_VERSION "\r\n");
+    AppendA(file, "arch      : " LUMVANE_ARCH_A "\r\n");
+    AppendA(file, "built     : " __DATE__ " " __TIME__ "\r\n");
+    wsprintfA(line, "pid/tid   : %lu / %lu\r\n", GetCurrentProcessId(), GetCurrentThreadId());
+    AppendA(file, line);
+
+    const EXCEPTION_RECORD *record = pException != nullptr ? pException->ExceptionRecord : nullptr;
+    if (record != nullptr) {
+        char hex[17];
+        wsprintfA(line, "exception : 0x%08X (%s)\r\n", record->ExceptionCode, ExceptionName(record->ExceptionCode));
+        AppendA(file, line);
+        HexPtrA(hex, record->ExceptionAddress);
+        wsprintfA(line, "address   : 0x%s\r\nflags     : 0x%08X\r\nparams    : %u\r\n",
+                  hex, record->ExceptionFlags, record->NumberParameters);
+        AppendA(file, line);
+
+        if (record->ExceptionCode == EXCEPTION_ACCESS_VIOLATION && record->NumberParameters >= 2) {
+            const ULONG_PTR op = record->ExceptionInformation[0];
+            HexPtrA(hex, reinterpret_cast<void *>(record->ExceptionInformation[1]));
+            wsprintfA(line, "av        : %s at 0x%s\r\n",
+                      op == 0 ? "read" : (op == 1 ? "write" : "execute"), hex);
+            AppendA(file, line);
+        }
+
+        HMODULE mod = nullptr;
+        if (GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                               static_cast<LPCWSTR>(record->ExceptionAddress), &mod) && mod != nullptr) {
+            wchar_t modPath[MAX_PATH] = L"";
+            if (GetModuleFileNameW(mod, modPath, MAX_PATH) > 0) {
+                const ULONG_PTR offset = reinterpret_cast<ULONG_PTR>(record->ExceptionAddress) -
+                                         reinterpret_cast<ULONG_PTR>(mod);
+                AppendA(file, "module    : ");
+                char narrow[MAX_PATH * 2] = "";
+                WideCharToMultiByte(CP_UTF8, 0, modPath, -1, narrow, sizeof(narrow) - 1, nullptr, nullptr);
+                AppendA(file, narrow);
+                HexPtrA(hex, reinterpret_cast<void *>(offset));
+                wsprintfA(line, " + 0x%s\r\n", hex);
+                AppendA(file, line);
+            }
+        }
+    }
+    AppendA(file, dumpWritten ? "minidump  : written alongside this file\r\n"
+                              : "minidump  : FAILED to write\r\n");
+
+    AppendA(file, "\r\n--- recent log ---\r\n");
+    static const QByteArray *lines[Logging::MAX_RECENT_LINES];
+    const int count = Logging::RecentLinesRaw(lines, Logging::MAX_RECENT_LINES);
+    for (int i = 0; i < count; ++i) {
+        if (lines[i] == nullptr || lines[i]->isEmpty()) continue;
+        DWORD written = 0;
+        WriteFile(file, lines[i]->constData(), static_cast<DWORD>(lines[i]->size()), &written, nullptr);
+        WriteFile(file, "\r\n", 2, &written, nullptr);
+    }
+    if (count == 0) AppendA(file, "(no log lines captured)\r\n");
+
+    FlushFileBuffers(file);
+    CloseHandle(file);
+}
+
+static void WriteCrashArtifacts(EXCEPTION_POINTERS *pException) {
+    if (InterlockedCompareExchange(&g_reporting, 1, 0) != 0) return;
+
+    Logging::FlushForCrash();
+    if (!g_crashDirReady) return;
+
+    SYSTEMTIME st;
+    GetLocalTime(&st);
+
+    wchar_t dumpPath[MAX_PATH];
+    wchar_t sidecarPath[MAX_PATH];
+    wsprintfW(dumpPath, L"%s\\Lumvane_%s_%s_%04d%02d%02d-%02d%02d%02d.dmp",
+              g_dumpPathTemplate, L"" LUMVANE_VERSION, LUMVANE_ARCH,
+              st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
+    wsprintfW(sidecarPath, L"%s\\Lumvane_%s_%s_%04d%02d%02d-%02d%02d%02d.txt",
+              g_dumpPathTemplate, L"" LUMVANE_VERSION, LUMVANE_ARCH,
+              st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
+
+    bool dumpWritten = false;
+    HMODULE dllHandle = LoadLibrary(_T("DBGHELP.DLL"));
+    if (dllHandle != nullptr) {
+        MINIDUMPWRITEDUMP dump = (MINIDUMPWRITEDUMP) GetProcAddress(dllHandle, "MiniDumpWriteDump");
+        if (dump != nullptr) {
+            HANDLE dumpHandle = CreateFileW(dumpPath, GENERIC_WRITE, 0, nullptr,
+                                            CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+            if (dumpHandle != INVALID_HANDLE_VALUE) {
+                MINIDUMP_EXCEPTION_INFORMATION dumpInfo;
+                dumpInfo.ExceptionPointers = pException;
+                dumpInfo.ThreadId = GetCurrentThreadId();
+                dumpInfo.ClientPointers = FALSE;
+
+                MINIDUMP_USER_STREAM logStream;
+                logStream.Type = LUMVANE_LOG_STREAM;
+                logStream.BufferSize = BuildLogStream();
+                logStream.Buffer = g_logStream;
+                MINIDUMP_USER_STREAM_INFORMATION streamInfo;
+                streamInfo.UserStreamCount = logStream.BufferSize > 0 ? 1 : 0;
+                streamInfo.UserStreamArray = &logStream;
+
+                dumpWritten = dump(GetCurrentProcess(), GetCurrentProcessId(), dumpHandle,
+                                   DUMP_TYPE, &dumpInfo, &streamInfo, nullptr) != FALSE;
+                CloseHandle(dumpHandle);
+            }
+        }
+    }
+
+    WriteSidecar(sidecarPath, pException, dumpWritten);
+
+    wchar_t msg[MAX_PATH + 512];
+    const EXCEPTION_RECORD *record = pException != nullptr ? pException->ExceptionRecord : nullptr;
+    wchar_t addrHex[17];
+    HexPtrW(addrHex, record != nullptr ? record->ExceptionAddress : nullptr);
+    wsprintfW(msg,
+              L"Lumvane %s (%s) crashed.\n\nException: 0x%08X\nAddress: 0x%s\n\n"
+              L"A crash report was saved to:\n%s\n\nPlease attach the .txt file (and the .dmp if you can) to a bug report.",
+              L"" LUMVANE_VERSION, LUMVANE_ARCH,
+              record != nullptr ? record->ExceptionCode : 0,
+              addrHex,
+              g_dumpPathTemplate);
+    MessageBoxW(nullptr, msg, L"Lumvane crashed", MB_OK | MB_ICONERROR | MB_SETFOREGROUND);
+}
+
+LONG __stdcall CreateCrashHandler(EXCEPTION_POINTERS *pException) {
+    WriteCrashArtifacts(pException);
+    return EXCEPTION_EXECUTE_HANDLER;
+}
+
+static void ReportSynthetic(DWORD code) {
+    CONTEXT context;
+    RtlCaptureContext(&context);
+
+    EXCEPTION_RECORD record;
+    ZeroMemory(&record, sizeof(record));
+    record.ExceptionCode = code;
+    record.ExceptionFlags = EXCEPTION_NONCONTINUABLE;
+#if defined(_M_ARM64) || defined(__aarch64__)
+    record.ExceptionAddress = reinterpret_cast<PVOID>(context.Pc);
+#elif defined(_M_X64) || defined(__x86_64__)
+    record.ExceptionAddress = reinterpret_cast<PVOID>(context.Rip);
+#else
+    record.ExceptionAddress = reinterpret_cast<PVOID>(context.Eip);
+#endif
+
+    EXCEPTION_POINTERS pointers;
+    pointers.ExceptionRecord = &record;
+    pointers.ContextRecord = &context;
+    WriteCrashArtifacts(&pointers);
+
+    TerminateProcess(GetCurrentProcess(), code);
+}
+
+static void OnTerminate() { ReportSynthetic(LUMVANE_EXC_TERMINATE); }
+
+static void OnPureCall() { ReportSynthetic(LUMVANE_EXC_PURECALL); }
+
+static void OnInvalidParameter(const wchar_t *, const wchar_t *, const wchar_t *, unsigned int, uintptr_t) {
+    ReportSynthetic(LUMVANE_EXC_INVALIDPARAM);
+}
+
+static void OnAbort(int) { ReportSynthetic(LUMVANE_EXC_ABORT); }
+
+static void OnNewFailed() { ReportSynthetic(LUMVANE_EXC_NEWFAIL); }
+
+void Windows_SetCrashHandler() {
+    SetErrorMode(SEM_FAILCRITICALERRORS);
+    SetUnhandledExceptionFilter(CreateCrashHandler);
+
+    ULONG stackGuarantee = 64 * 1024;
+    SetThreadStackGuarantee(&stackGuarantee);
+
+    std::set_terminate(OnTerminate);
+    std::set_new_handler(OnNewFailed);
+    _set_purecall_handler(OnPureCall);
+    _set_invalid_parameter_handler(OnInvalidParameter);
+    signal(SIGABRT, OnAbort);
+}
+
+void Windows_SetCrashDumpPath() {
+    const wchar_t *dir = Logging::CrashDirNative();
+    if (dir == nullptr || *dir == L'\0') return;
+    lstrcpynW(g_dumpPathTemplate, dir, MAX_PATH);
+    g_crashDirReady = true;
+}
+
+static bool RegisterWerApp(const wchar_t *exeName, const wchar_t *folder) {
+    wchar_t subKey[512];
+    wsprintfW(subKey, L"SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting\\LocalDumps\\%s", exeName);
+
+    HKEY key = nullptr;
+    if (RegCreateKeyExW(HKEY_LOCAL_MACHINE, subKey, 0, nullptr, REG_OPTION_NON_VOLATILE,
+                        KEY_SET_VALUE, nullptr, &key, nullptr) != ERROR_SUCCESS) {
+        return false;
+    }
+    RegSetValueExW(key, L"DumpFolder", 0, REG_EXPAND_SZ,
+                   reinterpret_cast<const BYTE *>(folder),
+                   static_cast<DWORD>((lstrlenW(folder) + 1) * sizeof(wchar_t)));
+    const DWORD dumpCount = 5;
+    RegSetValueExW(key, L"DumpCount", 0, REG_DWORD,
+                   reinterpret_cast<const BYTE *>(&dumpCount), sizeof(dumpCount));
+    const DWORD dumpType = 0;
+    RegSetValueExW(key, L"DumpType", 0, REG_DWORD,
+                   reinterpret_cast<const BYTE *>(&dumpType), sizeof(dumpType));
+    const DWORD customFlags = static_cast<DWORD>(DUMP_TYPE);
+    RegSetValueExW(key, L"CustomDumpFlags", 0, REG_DWORD,
+                   reinterpret_cast<const BYTE *>(&customFlags), sizeof(customFlags));
+    RegCloseKey(key);
+    return true;
+}
+
+void Windows_ConfigureWER() {
+    if (!g_crashDirReady) return;
+
+    wchar_t exePath[MAX_PATH] = L"";
+    if (GetModuleFileNameW(nullptr, exePath, MAX_PATH) == 0) return;
+    const wchar_t *exeName = exePath;
+    for (const wchar_t *p = exePath; *p != L'\0'; ++p) {
+        if (*p == L'\\' || *p == L'/') exeName = p + 1;
+    }
+
+    const bool ok = RegisterWerApp(exeName, g_dumpPathTemplate) &&
+                    RegisterWerApp(L"LumvaneCore.exe", g_dumpPathTemplate);
+    if (ok) {
+        LOG_INFO("WER LocalDumps registered for Lumvane.exe and LumvaneCore.exe");
+    } else {
+        LOG_INFO("WER LocalDumps not registered (needs admin); crashes that bypass "
+                 "the exception filter will go to %LOCALAPPDATA%\\CrashDumps if "
+                 "LocalDumps is enabled machine-wide");
+    }
+}

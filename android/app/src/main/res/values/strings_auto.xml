@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="auto_title">Auto-switch</string>
+    <string name="auto_enable">Enable</string>
+    <string name="auto_mode_hint">Uses the selected profile while it answers. When it stops working, moves to the fastest working candidate and returns once the selected one is back. Applies on the next connect (or immediately when changed from the dashboard while connected).</string>
+    <string name="auto_interval">Check interval, s</string>
+    <string name="auto_test_url">Test URL (empty = the general one)</string>
+    <string name="auto_tolerance">Tolerance between backups, ms (0 = 75)</string>
+    <string name="auto_scope">Candidates</string>
+    <string name="auto_scope_all">All profiles</string>
+    <string name="auto_scope_group">Current group</string>
+    <string name="auto_scope_manual">Chosen manually</string>
+    <string name="auto_pick">Choose profiles (%1$d)</string>
+    <string name="auto_now">Now: %1$s • %2$s</string>
+    <string name="auto_now_none">Now: choosing a profile…</string>
+    <string name="auto_alive">Working: %1$d of %2$d</string>
+    <string name="auto_check_now">Check now</string>
+    <string name="auto_not_applied">The running connection is without auto-switch.</string>
+    <string name="auto_off_not_applied">The running connection still uses auto-switch.</string>
+    <string name="auto_apply">Apply</string>
+    <string name="auto_failed">Auto-switch: %1$s</string>
+    <string name="dash_profile_auto">Main profile</string>
+    <string name="dash_auto_via">Now via: %1$s</string>
+    <string name="auto_channel_name">Auto-switch</string>
+    <string name="auto_alert_left">\"%1$s\" is not answering — using \"%2$s\"</string>
+    <string name="auto_alert_back">\"%1$s\" is back — switched back to it</string>
+    <string name="auto_alert_switched">Switched to \"%1$s\"</string>
+</resources>

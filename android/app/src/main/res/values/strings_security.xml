@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="set_mixed_vpn_hint">In VPN mode the local proxy starts only with authentication or LAN sharing enabled: an open proxy would let any app on the phone bypass the VPN rules.</string>
+</resources>

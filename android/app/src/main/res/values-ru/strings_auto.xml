@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="auto_title">Автопереключение</string>
+    <string name="auto_enable">Включить</string>
+    <string name="auto_mode_hint">Работает на выбранном профиле, пока он отвечает. Если он перестал работать — переходит на самый быстрый из рабочих кандидатов и возвращается, когда выбранный снова доступен. Применяется при следующем подключении (с дашборда при активном подключении — сразу).</string>
+    <string name="auto_interval">Интервал проверки, с</string>
+    <string name="auto_test_url">URL теста (пусто = общий)</string>
+    <string name="auto_tolerance">Допуск между запасными, мс (0 = 75)</string>
+    <string name="auto_scope">Кандидаты</string>
+    <string name="auto_scope_all">Все профили</string>
+    <string name="auto_scope_group">Текущая группа</string>
+    <string name="auto_scope_manual">Выбранные вручную</string>
+    <string name="auto_pick">Выбрать профили (%1$d)</string>
+    <string name="auto_now">Сейчас: %1$s • %2$s</string>
+    <string name="auto_now_none">Сейчас: выбор профиля…</string>
+    <string name="auto_alive">Работают: %1$d из %2$d</string>
+    <string name="auto_check_now">Проверить сейчас</string>
+    <string name="auto_not_applied">Текущее подключение работает без автопереключения.</string>
+    <string name="auto_off_not_applied">Текущее подключение всё ещё с автопереключением.</string>
+    <string name="auto_apply">Применить</string>
+    <string name="auto_failed">Автопереключение: %1$s</string>
+    <string name="dash_profile_auto">Основной профиль</string>
+    <string name="dash_auto_via">Сейчас через: %1$s</string>
+    <string name="auto_channel_name">Автопереключение</string>
+    <string name="auto_alert_left">\"%1$s\" не отвечает — работаем через \"%2$s\"</string>
+    <string name="auto_alert_back">\"%1$s\" снова доступен — вернулись на него</string>
+    <string name="auto_alert_switched">Переключено на \"%1$s\"</string>
+</resources>

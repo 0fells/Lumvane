@@ -1,0 +1,7 @@
+{
+  "name": "lumvane-avatar-anim",
+  "private": true,
+  "type": "module",
+  "scripts": { "build": "node render.mjs ../avatar-800.gif" },
+  "dependencies": { "@napi-rs/canvas": "0.1.65", "gifenc": "1.0.3" }
+}
